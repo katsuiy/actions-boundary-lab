@@ -1,0 +1,32 @@
+name: Fork PR boundary probe
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret presence without printing it
+        run: |
+          if [ -n "${{ secrets.BB_FAKE_SECRET }}" ]; then
+            echo "secret_present=true" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "secret_present=false" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Try write with GITHUB_TOKEN
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "token_write_attempt=true" >> "$GITHUB_STEP_SUMMARY"
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "boundary-probe-${{ github.run_id }}" \
+            --body "Created by boundary probe run ${{ github.run_id }}"
